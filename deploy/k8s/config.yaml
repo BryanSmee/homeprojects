@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: homeprojects-config
+data:
+  HP_ADDR: ":8080"
+  HP_PUBLIC_BASE_URL: "https://homeprojects.example.com"
+  HP_FRONTEND_BASE_URL: "https://homeprojects.example.com"
+  HP_ALLOWED_ORIGINS: "https://homeprojects.example.com"
+  HP_DB_DRIVER: "postgres"
+  HP_COOKIE_SECURE: "true"
+  HP_OIDC_ISSUER: "https://pocket-id.example.com"
+  HP_OIDC_SCOPES: "openid,profile,email"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: homeprojects-secrets
+type: Opaque
+stringData:
+  # Replace these before applying.
+  HP_SESSION_SECRET: "change-me-to-a-long-random-string"
+  HP_DB_DSN: "host=postgres user=hp password=hp dbname=homeprojects port=5432 sslmode=disable"
+  HP_OIDC_CLIENT_ID: "homeprojects"
+  HP_OIDC_CLIENT_SECRET: "change-me"

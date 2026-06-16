@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: homeprojects
+  labels:
+    app: homeprojects
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: homeprojects
+  template:
+    metadata:
+      labels:
+        app: homeprojects
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: server
+          image: homeprojects:latest
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: homeprojects-config
+            - secretRef:
+                name: homeprojects-secrets
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: homeprojects
+spec:
+  selector:
+    app: homeprojects
+  ports:
+    - port: 80
+      targetPort: 8080
