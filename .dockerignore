@@ -1,0 +1,6 @@
+.git
+*.db
+*.db-*
+.env
+README.md
+Makefile
