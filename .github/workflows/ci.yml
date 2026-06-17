@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   test:
-    name: Test & build
+    name: Backend test & build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,8 +27,25 @@ jobs:
       - run: go test ./...
       - run: CGO_ENABLED=0 go build ./...
 
+  web:
+    name: Frontend lint & build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
   docker:
-    name: Docker image
+    name: Backend image
     needs: test
     runs-on: ubuntu-latest
     permissions:
@@ -36,32 +53,13 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
-
-      # Build the image on every event, but only publish on pushes to main and
-      # on tag/release events. PRs build only, to validate the Dockerfile.
       - name: Compute image tags
         id: meta
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: |
-          IMAGE="ghcr.io/${GITHUB_REPOSITORY,,}"
-          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
-            echo "push=false" >> "$GITHUB_OUTPUT"
-            echo "tags=$IMAGE:pr" >> "$GITHUB_OUTPUT"
-          elif [[ "$GITHUB_EVENT_NAME" == "release" ]]; then
-            echo "push=true" >> "$GITHUB_OUTPUT"
-            echo "tags=$IMAGE:${RELEASE_TAG}" >> "$GITHUB_OUTPUT"
-          elif [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
-            echo "push=true" >> "$GITHUB_OUTPUT"
-            echo "tags=$IMAGE:${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
-          else
-            VERSION="$(date -u +'%Y%m%d%H%M%S')"
-            echo "push=true" >> "$GITHUB_OUTPUT"
-            echo "tags=$IMAGE:${VERSION},$IMAGE:latest" >> "$GITHUB_OUTPUT"
-          fi
-
+          IMAGE_SUFFIX: ""
+        run: .github/scripts/image-tags.sh
       - uses: docker/setup-buildx-action@v3
-
       - name: Log in to GHCR
         if: steps.meta.outputs.push == 'true'
         uses: docker/login-action@v3
@@ -69,11 +67,43 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
       - uses: docker/build-push-action@v6
         with:
           context: .
           push: ${{ steps.meta.outputs.push == 'true' }}
           tags: ${{ steps.meta.outputs.tags }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+  web-docker:
+    name: Frontend image
+    needs: web
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compute image tags
+        id: meta
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          IMAGE_SUFFIX: "-web"
+        run: .github/scripts/image-tags.sh
+      - uses: docker/setup-buildx-action@v3
+      - name: Log in to GHCR
+        if: steps.meta.outputs.push == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: ${{ steps.meta.outputs.push == 'true' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          build-args: |
+            NEXT_PUBLIC_API_BASE_URL=${{ vars.NEXT_PUBLIC_API_BASE_URL }}
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
