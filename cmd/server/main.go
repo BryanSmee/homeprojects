@@ -35,7 +35,7 @@ func run() error {
 		return err
 	}
 
-	gdb, err := db.Open(cfg.DBDriver, cfg.DBDSN)
+	gdb, err := db.Open(cfg.DB.Driver, cfg.DB.DSN)
 	if err != nil {
 		return err
 	}
@@ -51,7 +51,8 @@ func run() error {
 	}
 
 	sessions := auth.NewSessionManager(
-		cfg.SessionSecret, cfg.SessionTTL, cfg.CookieName, cfg.CookieSecure, cfg.CookieDomain,
+		cfg.Session.Secret, cfg.Session.TTL, cfg.Session.CookieName,
+		cfg.Session.CookieSecure, cfg.Session.CookieDomain,
 	)
 
 	authn, err := buildAuthenticator(ctx, cfg)
@@ -60,7 +61,7 @@ func run() error {
 	}
 
 	srv := api.NewServer(cfg, store.New(gdb), azEngine, sessions, authn, registry)
-	return serve(cfg.Addr, srv.Routes())
+	return serve(cfg.HTTP.Addr, srv.Routes())
 }
 
 func buildAuthenticator(ctx context.Context, cfg *config.Config) (*auth.Authenticator, error) {
@@ -69,8 +70,8 @@ func buildAuthenticator(ctx context.Context, cfg *config.Config) (*auth.Authenti
 		return nil, nil
 	}
 	return auth.NewAuthenticator(
-		ctx, cfg.OIDCIssuer, cfg.OIDCClientID, cfg.OIDCClientSecret,
-		cfg.OIDCRedirectURL, cfg.OIDCScopes,
+		ctx, cfg.OIDC.Issuer, cfg.OIDC.ClientID, cfg.OIDC.ClientSecret,
+		cfg.OIDC.RedirectURL, cfg.OIDC.Scopes,
 	)
 }
 

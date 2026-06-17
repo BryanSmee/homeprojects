@@ -9,76 +9,92 @@ import (
 	"time"
 )
 
-// Config holds all runtime configuration for the server.
 type Config struct {
-	// HTTP
-	Addr           string
-	AllowedOrigins []string
-	PublicBaseURL  string // public URL of this API, used to build OIDC redirect URLs
-
-	// Driver is a registered DB driver name (see internal/db).
-	DBDriver string
-	DBDSN    string
-
-	// OIDC/SSO (e.g. Pocket ID). Empty issuer enables dev-login mode.
-	OIDCIssuer       string
-	OIDCClientID     string
-	OIDCClientSecret string
-	OIDCRedirectURL  string
-	OIDCScopes       []string
-
-	// Session signing key for the JWT stored in the session cookie.
-	SessionSecret   string
-	SessionTTL      time.Duration
-	CookieName      string
-	CookieSecure    bool
-	CookieDomain    string
-	FrontendBaseURL string
+	HTTP    HTTPConfig
+	DB      DBConfig
+	OIDC    OIDCConfig
+	Session SessionConfig
 }
 
-// Load reads configuration from the environment, applying defaults.
+type HTTPConfig struct {
+	Addr            string
+	AllowedOrigins  []string
+	PublicBaseURL   string // public URL of this API, used to build the OIDC redirect URL
+	FrontendBaseURL string // where to send the browser after login
+}
+
+// DBConfig selects a registered DB driver (see internal/db).
+type DBConfig struct {
+	Driver string
+	DSN    string
+}
+
+// OIDCConfig configures SSO (e.g. Pocket ID). An empty Issuer enables dev-login.
+type OIDCConfig struct {
+	Issuer       string
+	ClientID     string
+	ClientSecret string
+	RedirectURL  string
+	Scopes       []string
+}
+
+type SessionConfig struct {
+	Secret       string
+	TTL          time.Duration
+	CookieName   string
+	CookieSecure bool
+	CookieDomain string
+}
+
 func Load() (*Config, error) {
 	c := &Config{
-		Addr:             env("HP_ADDR", ":8080"),
-		AllowedOrigins:   splitList(env("HP_ALLOWED_ORIGINS", "http://localhost:3000")),
-		PublicBaseURL:    env("HP_PUBLIC_BASE_URL", "http://localhost:8080"),
-		DBDriver:         env("HP_DB_DRIVER", "sqlite"),
-		DBDSN:            env("HP_DB_DSN", "homeprojects.db"),
-		OIDCIssuer:       env("HP_OIDC_ISSUER", ""),
-		OIDCClientID:     env("HP_OIDC_CLIENT_ID", ""),
-		OIDCClientSecret: env("HP_OIDC_CLIENT_SECRET", ""),
-		OIDCRedirectURL:  env("HP_OIDC_REDIRECT_URL", ""),
-		OIDCScopes:       splitList(env("HP_OIDC_SCOPES", "openid,profile,email")),
-		SessionSecret:    env("HP_SESSION_SECRET", "dev-insecure-change-me"),
-		SessionTTL:       envDuration("HP_SESSION_TTL", 7*24*time.Hour),
-		CookieName:       env("HP_COOKIE_NAME", "hp_session"),
-		CookieSecure:     envBool("HP_COOKIE_SECURE", false),
-		CookieDomain:     env("HP_COOKIE_DOMAIN", ""),
-		FrontendBaseURL:  env("HP_FRONTEND_BASE_URL", "http://localhost:3000"),
+		HTTP: HTTPConfig{
+			Addr:            env("HP_ADDR", ":8080"),
+			AllowedOrigins:  splitList(env("HP_ALLOWED_ORIGINS", "http://localhost:3000")),
+			PublicBaseURL:   env("HP_PUBLIC_BASE_URL", "http://localhost:8080"),
+			FrontendBaseURL: env("HP_FRONTEND_BASE_URL", "http://localhost:3000"),
+		},
+		DB: DBConfig{
+			Driver: env("HP_DB_DRIVER", "sqlite"),
+			DSN:    env("HP_DB_DSN", "homeprojects.db"),
+		},
+		OIDC: OIDCConfig{
+			Issuer:       env("HP_OIDC_ISSUER", ""),
+			ClientID:     env("HP_OIDC_CLIENT_ID", ""),
+			ClientSecret: env("HP_OIDC_CLIENT_SECRET", ""),
+			RedirectURL:  env("HP_OIDC_REDIRECT_URL", ""),
+			Scopes:       splitList(env("HP_OIDC_SCOPES", "openid,profile,email")),
+		},
+		Session: SessionConfig{
+			Secret:       env("HP_SESSION_SECRET", "dev-insecure-change-me"),
+			TTL:          envDuration("HP_SESSION_TTL", 7*24*time.Hour),
+			CookieName:   env("HP_COOKIE_NAME", "hp_session"),
+			CookieSecure: envBool("HP_COOKIE_SECURE", false),
+			CookieDomain: env("HP_COOKIE_DOMAIN", ""),
+		},
 	}
 
-	if c.OIDCRedirectURL == "" {
-		c.OIDCRedirectURL = strings.TrimRight(c.PublicBaseURL, "/") + "/api/auth/callback"
+	if c.OIDC.RedirectURL == "" {
+		c.OIDC.RedirectURL = strings.TrimRight(c.HTTP.PublicBaseURL, "/") + "/api/auth/callback"
 	}
 
 	return c, c.validate()
 }
 
 func (c *Config) validate() error {
-	switch c.DBDriver {
+	switch c.DB.Driver {
 	case "sqlite", "postgres":
 	default:
-		return fmt.Errorf("unsupported HP_DB_DRIVER %q (want sqlite or postgres)", c.DBDriver)
+		return fmt.Errorf("unsupported HP_DB_DRIVER %q (want sqlite or postgres)", c.DB.Driver)
 	}
-	if c.OIDCEnabled() {
-		if c.OIDCClientID == "" {
-			return fmt.Errorf("HP_OIDC_CLIENT_ID is required when HP_OIDC_ISSUER is set")
-		}
+	if c.OIDCEnabled() && c.OIDC.ClientID == "" {
+		return fmt.Errorf("HP_OIDC_CLIENT_ID is required when HP_OIDC_ISSUER is set")
 	}
 	return nil
 }
 
-func (c *Config) OIDCEnabled() bool { return c.OIDCIssuer != "" }
+// OIDCEnabled reports whether real SSO is configured; dev-login is used if not.
+func (c *Config) OIDCEnabled() bool { return c.OIDC.Issuer != "" }
 
 func env(key, def string) string {
 	if v, ok := os.LookupEnv(key); ok && v != "" {

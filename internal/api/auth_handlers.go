@@ -52,7 +52,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	http.SetCookie(w, &http.Cookie{
 		Name: stateCookie, Value: state, Path: "/", MaxAge: 600,
-		HttpOnly: true, Secure: s.cfg.CookieSecure, SameSite: http.SameSiteLaxMode,
+		HttpOnly: true, Secure: s.cfg.Session.CookieSecure, SameSite: http.SameSiteLaxMode,
 	})
 	http.Redirect(w, r, s.auth.AuthCodeURL(state), http.StatusFound)
 }
@@ -74,7 +74,7 @@ func (s *Server) handleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.issueSession(w, user.ID, claims.Subject, claims.Email, claims.Name)
-	http.Redirect(w, r, s.cfg.FrontendBaseURL, http.StatusFound)
+	http.Redirect(w, r, s.cfg.HTTP.FrontendBaseURL, http.StatusFound)
 }
 
 type devLoginRequest struct {
