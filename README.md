@@ -5,8 +5,8 @@ home — think "Jira, but simple". Users create **Projects**, fill them with
 **Tasks** (and **Subtasks**), invite collaborators with roles, and optionally
 share a project publicly via a read-only link.
 
-This repository currently contains the **backend** (Go). A Next.js + shadcn/ui
-frontend will follow.
+The repo contains the **Go backend** (this directory) and a **Next.js +
+shadcn/ui frontend** (`frontend/`).
 
 ## Concepts
 
@@ -119,10 +119,31 @@ Sample manifests are in `deploy/k8s/`. The image is stateless aside from the
 database; supply config via a ConfigMap and secrets via a Secret, and point
 `HP_DB_DRIVER=postgres` at a managed PostgreSQL for production.
 
+## Frontend
+
+A Next.js (App Router) + TypeScript + Tailwind + shadcn/ui app lives in
+`frontend/`. It talks to this API using cookie-based sessions
+(`credentials: include`), so set `NEXT_PUBLIC_API_BASE_URL` to the backend URL
+and make sure the backend's `HP_ALLOWED_ORIGINS` includes the frontend origin.
+
+```bash
+cd frontend
+cp .env.local.example .env.local   # NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
+npm install
+npm run dev                        # http://localhost:3000
+```
+
+Pages: `/login` (SSO + dev-login), `/` (your projects), `/projects/[id]`
+(tasks, subtasks, members, 3D-printing links), and `/p/[id]` (public read-only
+view). Build the container with `docker build -t homeprojects-web ./frontend`.
+
 ## Tests
 
 ```bash
-make test
+make test          # backend: status derivation + Rego policy
+cd frontend && npm run lint && npm run build
 ```
 
-Covered: project-status derivation rules and the Rego authorization policy.
+CI (`.github/workflows/ci.yml`) runs both on every PR and publishes two images
+to GHCR on push to `main` (datetime + `latest`) and on tag/release (the tag):
+`homeprojects` (backend) and `homeprojects-web` (frontend).
