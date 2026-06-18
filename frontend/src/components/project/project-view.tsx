@@ -92,10 +92,14 @@ export function ProjectView({
 
       <Card>
         <CardHeader>
-          <CardTitle>3D printing</CardTitle>
+          <CardTitle>3D files</CardTitle>
         </CardHeader>
         <CardContent>
-          <PrintLinksPanel projectId={projectId} canEdit={canEdit} />
+          <PrintLinksPanel
+            projectId={projectId}
+            tasks={project.tasks ?? []}
+            canEdit={canEdit}
+          />
         </CardContent>
       </Card>
 

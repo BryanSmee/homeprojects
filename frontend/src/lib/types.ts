@@ -68,12 +68,17 @@ export interface ProjectDetail extends Project {
 export interface PrintLink {
   id: string;
   projectId: string;
-  taskId?: string | null;
+  taskId: string;
   source: PrintSource;
   url: string;
+  thumbnailUrl: string;
   title: string;
   notes: string;
   status?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface AuthConfig {
+  oidcEnabled: boolean;
 }
