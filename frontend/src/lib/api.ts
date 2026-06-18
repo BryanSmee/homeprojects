@@ -112,6 +112,10 @@ export const api = {
     }),
 
   // Printing extension
+  previewLink: (url: string) =>
+    request<{ title: string; thumbnailUrl: string }>(
+      `/api/ext/printing/preview?url=${encodeURIComponent(url)}`
+    ),
   listPrintLinks: (projectId: string, taskId?: string) =>
     request<PrintLink[]>(
       `/api/ext/printing/projects/${projectId}/links` +
