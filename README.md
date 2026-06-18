@@ -56,8 +56,18 @@ extensions so they reuse the core rules.
 
 ## Running locally
 
-No external services required — defaults to on-disk SQLite and a dev-login that
-stands in for SSO:
+The quickest way to run the whole stack (PostgreSQL + API + frontend) is Docker
+Compose:
+
+```bash
+docker compose up --build      # web on :3000, api on :8080
+```
+
+SSO is left unconfigured, so the API runs in dev-login mode — open
+http://localhost:3000 and use the developer login.
+
+To run just the backend without containers (on-disk SQLite, no external
+services):
 
 ```bash
 cp .env.example .env        # optional; defaults work out of the box
