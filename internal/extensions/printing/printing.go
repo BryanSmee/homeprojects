@@ -56,6 +56,7 @@ func (e *Extension) Models() []any { return []any{&PrintLink{}} }
 
 func (e *Extension) Mount(r chi.Router, deps extensions.Deps) {
 	e.deps = deps
+	r.Get("/preview", e.preview)
 	r.Get("/projects/{projectID}/links", e.list)
 	r.Post("/projects/{projectID}/links", e.create)
 	r.Delete("/projects/{projectID}/links/{linkID}", e.delete)

@@ -176,6 +176,22 @@ function AddFileDialog({
   const [thumbnailUrl, setThumbnailUrl] = React.useState("");
   const [title, setTitle] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
+  const [previewing, setPreviewing] = React.useState(false);
+
+  // Resolve the page's OpenGraph thumbnail/title, filling empty fields only.
+  async function fetchPreview() {
+    if (!url) return;
+    setPreviewing(true);
+    try {
+      const p = await api.previewLink(url);
+      setThumbnailUrl((cur) => cur || p.thumbnailUrl);
+      setTitle((cur) => cur || p.title);
+    } catch {
+      // best-effort: ignore preview failures
+    } finally {
+      setPreviewing(false);
+    }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -256,10 +272,16 @@ function AddFileDialog({
                 placeholder="https://…"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
+                onBlur={fetchPreview}
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="f-thumb">Thumbnail URL (optional)</Label>
+              <Label htmlFor="f-thumb">
+                Thumbnail URL{" "}
+                <span className="font-normal text-muted-foreground">
+                  {previewing ? "(fetching…)" : "(auto-detected, editable)"}
+                </span>
+              </Label>
               <Input
                 id="f-thumb"
                 type="url"
@@ -267,6 +289,14 @@ function AddFileDialog({
                 value={thumbnailUrl}
                 onChange={(e) => setThumbnailUrl(e.target.value)}
               />
+              {thumbnailUrl && (
+                // eslint-disable-next-line @next/next/no-img-element -- external preview
+                <img
+                  src={thumbnailUrl}
+                  alt="thumbnail preview"
+                  className="mt-1 h-24 w-24 rounded border object-cover"
+                />
+              )}
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="f-title">Title (optional)</Label>
