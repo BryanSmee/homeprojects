@@ -1,0 +1,54 @@
+# Full local stack: PostgreSQL + Go API + Next.js frontend.
+# Usage: docker compose up --build   ->  web on :3000, api on :8080
+#
+# SSO is left unconfigured, so the API runs in dev-login mode
+# (POST /api/auth/login form on the frontend's /login page).
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: hp
+      POSTGRES_PASSWORD: hp
+      POSTGRES_DB: homeprojects
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hp -d homeprojects"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+    environment:
+      HP_ADDR: ":8080"
+      HP_DB_DRIVER: postgres
+      HP_DB_DSN: "host=db user=hp password=hp dbname=homeprojects port=5432 sslmode=disable"
+      HP_ALLOWED_ORIGINS: "http://localhost:3000"
+      HP_PUBLIC_BASE_URL: "http://localhost:8080"
+      HP_FRONTEND_BASE_URL: "http://localhost:3000"
+      HP_SESSION_SECRET: "local-dev-secret-change-me"
+      HP_COOKIE_SECURE: "false"
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./frontend
+      # NEXT_PUBLIC_* is baked at build time; it must point at the API URL the
+      # browser reaches (the host), not the internal compose hostname.
+      args:
+        NEXT_PUBLIC_API_BASE_URL: "http://localhost:8080"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
