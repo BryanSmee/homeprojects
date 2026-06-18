@@ -103,6 +103,7 @@ dev-login route is then disabled and the login flow lives at
 | Method & path                                   | Action            | Auth                |
 | ----------------------------------------------- | ----------------- | ------------------- |
 | `GET /healthz`                                  | health            | none                |
+| `GET /api/auth/config`                          | login mode (oidc) | none                |
 | `GET /api/auth/login` / `callback`              | SSO login         | none                |
 | `POST /api/auth/dev-login`                      | dev login         | none (dev mode)     |
 | `GET /api/auth/me`                              | current user      | required            |
@@ -117,7 +118,11 @@ dev-login route is then disabled and the login flow lives at
 | `DELETE /api/projects/{id}/members/{userID}`    | remove member     | admin               |
 | `GET/POST /api/projects/{id}/tasks`             | tasks             | read / editor       |
 | `PATCH/DELETE /api/projects/{id}/tasks/{taskID}`| task              | editor              |
-| `GET/POST /api/ext/printing/projects/{id}/links`| print links       | read / editor       |
+| `GET/POST /api/ext/printing/projects/{id}/links`| 3D files (per task)| read / editor       |
+
+3D files belong to a task (`taskId` required, with an optional `thumbnailUrl`).
+`GET .../links` returns the whole project's files for the overview, or a single
+task's files with `?taskId=`.
 
 ## Containers & Kubernetes
 

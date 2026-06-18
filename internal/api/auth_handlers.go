@@ -12,6 +12,7 @@ import (
 
 func (s *Server) mountAuthRoutes(api chi.Router) {
 	api.Route("/auth", func(a chi.Router) {
+		a.Get("/config", s.handleAuthConfig)
 		a.Get("/me", s.handleMe)
 		a.Post("/logout", s.handleLogout)
 		if s.auth != nil {
@@ -21,6 +22,11 @@ func (s *Server) mountAuthRoutes(api chi.Router) {
 			a.Post("/dev-login", s.handleDevLogin)
 		}
 	})
+}
+
+// handleAuthConfig advertises which login method the frontend should offer.
+func (s *Server) handleAuthConfig(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]bool{"oidcEnabled": s.auth != nil})
 }
 
 func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
