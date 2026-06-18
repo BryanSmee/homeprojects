@@ -24,6 +24,14 @@ export default function LoginPage() {
   const [email, setEmail] = React.useState("");
   const [name, setName] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
+  const [oidcEnabled, setOidcEnabled] = React.useState<boolean | null>(null);
+
+  React.useEffect(() => {
+    api
+      .authConfig()
+      .then((c) => setOidcEnabled(c.oidcEnabled))
+      .catch(() => setOidcEnabled(false));
+  }, []);
 
   React.useEffect(() => {
     if (!loading && user) router.replace("/");
@@ -55,43 +63,42 @@ export default function LoginPage() {
           <CardDescription>Sign in to manage your home projects.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
-          <Button asChild className="w-full">
-            <a href={api.loginUrl()}>
-              <KeyRound className="h-4 w-4" />
-              Sign in with SSO
-            </a>
-          </Button>
-
-          <div className="relative text-center text-xs text-muted-foreground">
-            <span className="bg-card px-2">or developer login</span>
-            <div className="absolute inset-x-0 top-1/2 -z-10 h-px bg-border" />
-          </div>
-
-          <form onSubmit={handleDevLogin} className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Your name"
-              />
-            </div>
-            <Button type="submit" variant="secondary" disabled={submitting}>
-              {submitting ? "Signing in…" : "Developer login"}
+          {oidcEnabled === null ? (
+            <p className="text-center text-sm text-muted-foreground">Loading…</p>
+          ) : oidcEnabled ? (
+            <Button asChild className="w-full">
+              <a href={api.loginUrl()}>
+                <KeyRound className="h-4 w-4" />
+                Sign in with SSO
+              </a>
             </Button>
-          </form>
+          ) : (
+            <form onSubmit={handleDevLogin} className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your name"
+                />
+              </div>
+              <Button type="submit" disabled={submitting}>
+                {submitting ? "Signing in…" : "Developer login"}
+              </Button>
+            </form>
+          )}
         </CardContent>
       </Card>
     </div>

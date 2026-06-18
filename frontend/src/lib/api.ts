@@ -1,4 +1,5 @@
 import type {
+  AuthConfig,
   Membership,
   PrintLink,
   PrintSource,
@@ -43,6 +44,7 @@ const body = (data: unknown) => JSON.stringify(data);
 
 export const api = {
   // Auth
+  authConfig: () => request<AuthConfig>("/api/auth/config"),
   me: () => request<User>("/api/auth/me"),
   devLogin: (email: string, name: string) =>
     request<User>("/api/auth/dev-login", {
@@ -110,11 +112,21 @@ export const api = {
     }),
 
   // Printing extension
-  listPrintLinks: (projectId: string) =>
-    request<PrintLink[]>(`/api/ext/printing/projects/${projectId}/links`),
+  listPrintLinks: (projectId: string, taskId?: string) =>
+    request<PrintLink[]>(
+      `/api/ext/printing/projects/${projectId}/links` +
+        (taskId ? `?taskId=${encodeURIComponent(taskId)}` : "")
+    ),
   addPrintLink: (
     projectId: string,
-    input: { source: PrintSource; url: string; title?: string; notes?: string; taskId?: string | null }
+    input: {
+      taskId: string;
+      source: PrintSource;
+      url: string;
+      thumbnailUrl?: string;
+      title?: string;
+      notes?: string;
+    }
   ) =>
     request<PrintLink>(`/api/ext/printing/projects/${projectId}/links`, {
       method: "POST",
